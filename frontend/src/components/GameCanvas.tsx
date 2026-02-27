@@ -63,9 +63,14 @@ export function GameCanvas({ mode, onTrigger, paused = false, fullscreen = false
   }, [mode, onTrigger])
 
   useEffect(() => {
-    const updateTouchMode = () => {
+    const detectMobile = () => {
       const coarse = window.matchMedia('(pointer: coarse)').matches
-      setShowTouchControls(coarse || window.innerWidth < 900)
+      const touch = (navigator.maxTouchPoints ?? 0) > 0
+      const ua = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+      return coarse || touch || ua || window.innerWidth < 1024
+    }
+    const updateTouchMode = () => {
+      setShowTouchControls(detectMobile())
     }
     updateTouchMode()
     window.addEventListener('resize', updateTouchMode)

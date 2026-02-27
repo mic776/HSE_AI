@@ -841,9 +841,16 @@ function StudentPlayPage() {
   const [awaitingNextQuestion, setAwaitingNextQuestion] = useState(false)
   const [mustGetCorrect, setMustGetCorrect] = useState(false)
   const [status, setStatus] = useState(mode === 'classic' ? 'Классический режим запущен' : 'Игра запущена')
+  const detectMobile = () => {
+    if (typeof window === 'undefined') return false
+    const coarse = window.matchMedia('(pointer: coarse)').matches
+    const touch = (navigator.maxTouchPoints ?? 0) > 0
+    const ua = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)
+    return coarse || touch || ua || window.innerWidth < 1024
+  }
   const [mobileView, setMobileView] = useState(() => {
     if (typeof window === 'undefined') return false
-    return window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 900
+    return detectMobile()
   })
   const [portrait, setPortrait] = useState(() => {
     if (typeof window === 'undefined') return false
@@ -853,7 +860,7 @@ function StudentPlayPage() {
 
   useEffect(() => {
     const updateViewport = () => {
-      const isMobile = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 900
+      const isMobile = detectMobile()
       setMobileView(isMobile)
       setPortrait(window.innerHeight > window.innerWidth)
     }
