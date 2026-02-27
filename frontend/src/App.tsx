@@ -77,9 +77,6 @@ function AuthPage({ mode }: { mode: 'login' | 'register' }) {
       <p className="text-sm">
         {mode === 'login' ? <Link to="/register">Нет аккаунта</Link> : <Link to="/login">Уже есть аккаунт</Link>}
       </p>
-      <Link to="/join" className="block rounded-lg bg-blue-600 px-4 py-2 text-center text-white">
-        Присоединиться к квизу
-      </Link>
     </form>,
   )
 }
