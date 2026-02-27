@@ -9,7 +9,11 @@ use tower_http::trace::TraceLayer;
 pub fn build_router(state: AppState) -> Router {
     let cors = CorsLayer::new()
         .allow_credentials(true)
-        .allow_origin(HeaderValue::from_static("http://localhost:5173"))
+        .allow_origin([
+            HeaderValue::from_static("http://localhost:5173"),
+            HeaderValue::from_static("https://school-gaming-quiz.ru"),
+            HeaderValue::from_static("https://www.school-gaming-quiz.ru"),
+        ])
         .allow_methods([Method::GET, Method::POST, Method::PUT, Method::DELETE])
         .allow_headers([
             axum::http::header::CONTENT_TYPE,
