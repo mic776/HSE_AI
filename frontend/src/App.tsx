@@ -841,7 +841,51 @@ function StudentPlayPage() {
   const [awaitingNextQuestion, setAwaitingNextQuestion] = useState(false)
   const [mustGetCorrect, setMustGetCorrect] = useState(false)
   const [status, setStatus] = useState(mode === 'classic' ? 'Классический режим запущен' : 'Игра запущена')
+  const [mobileView, setMobileView] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 900
+  })
+  const [portrait, setPortrait] = useState(() => {
+    if (typeof window === 'undefined') return false
+    return window.innerHeight > window.innerWidth
+  })
   const navigate = useNavigate()
+
+  useEffect(() => {
+    const updateViewport = () => {
+      const isMobile = window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 900
+      setMobileView(isMobile)
+      setPortrait(window.innerHeight > window.innerWidth)
+    }
+    updateViewport()
+    window.addEventListener('resize', updateViewport)
+    window.addEventListener('orientationchange', updateViewport)
+    return () => {
+      window.removeEventListener('resize', updateViewport)
+      window.removeEventListener('orientationchange', updateViewport)
+    }
+  }, [])
+
+  useEffect(() => {
+    const fullscreenGame = mode !== 'classic' && mobileView
+    if (!fullscreenGame) return
+    const html = document.documentElement
+    const body = document.body
+    const prevHtmlOverflow = html.style.overflow
+    const prevBodyOverflow = body.style.overflow
+    const prevBodyTouch = body.style.touchAction
+    const prevOverscroll = body.style.overscrollBehavior
+    html.style.overflow = 'hidden'
+    body.style.overflow = 'hidden'
+    body.style.touchAction = 'none'
+    body.style.overscrollBehavior = 'none'
+    return () => {
+      html.style.overflow = prevHtmlOverflow
+      body.style.overflow = prevBodyOverflow
+      body.style.touchAction = prevBodyTouch
+      body.style.overscrollBehavior = prevOverscroll
+    }
+  }, [mode, mobileView])
 
   useEffect(() => {
     if (!roomCode || !nickname) return
@@ -880,6 +924,7 @@ function StudentPlayPage() {
   }, [roomCode, nickname, navigate, mode])
 
   const triggerQuestion = (reason: 'death' | 'level_up') => {
+    if (mode !== 'classic' && mobileView && portrait) return
     if (!socket || question || awaitingNextQuestion || mustGetCorrect) return
     setMustGetCorrect(true)
     setAwaitingNextQuestion(true)
@@ -897,18 +942,27 @@ function StudentPlayPage() {
   }
 
   const overlayActive = mode !== 'classic' && (Boolean(question) || awaitingNextQuestion || mustGetCorrect)
-
-  return shell(
-    mode === 'classic' ? 'Классический режим' : 'Игровой режим',
+  const needsLandscape = mode !== 'classic' && mobileView && portrait
+  const gamePaused = overlayActive || needsLandscape
+  const content = (
     <div className="space-y-3">
       {mode === 'classic' ? (
         <div className="rounded-2xl bg-white/90 p-4 shadow">
           <p className="text-sm text-emerald-950/70">Мини-игры отключены. Следующий вопрос показывается автоматически после правильного ответа.</p>
         </div>
       ) : (
-        <div className="relative">
-          <GameCanvas mode={mode} onTrigger={triggerQuestion} paused={overlayActive} />
-          {overlayActive && (
+        <div className={mobileView ? 'relative h-full w-full' : 'relative'}>
+          <GameCanvas mode={mode} onTrigger={triggerQuestion} paused={gamePaused} fullscreen={mobileView} />
+          {needsLandscape && (
+            <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/85 p-6 text-center">
+              <div className="max-w-sm rounded-2xl bg-white/95 p-5 shadow-lg">
+                <p className="text-sm uppercase tracking-wide text-emerald-900/70">Игровой режим</p>
+                <p className="mt-2 text-lg font-semibold text-emerald-950">Поверните устройство горизонтально</p>
+                <p className="mt-2 text-sm text-emerald-950/70">В портретной ориентации игра остановлена.</p>
+              </div>
+            </div>
+          )}
+          {overlayActive && !needsLandscape && (
             <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 p-4 backdrop-blur-[2px]">
               {question ? (
                 <div className="w-full max-w-2xl">
@@ -924,9 +978,23 @@ function StudentPlayPage() {
           )}
         </div>
       )}
-      <div className="rounded-xl bg-white/90 p-3 shadow text-sm">{status}</div>
+      {!mobileView && <div className="rounded-xl bg-white/90 p-3 shadow text-sm">{status}</div>}
       {mode === 'classic' && question && <QuestionCard question={question} onSubmit={submitAnswer} />}
-    </div>,
+    </div>
+  )
+
+  if (mode !== 'classic' && mobileView) {
+    return (
+      <div className="fixed inset-0 z-40 h-screen w-screen overflow-hidden bg-black" style={{ touchAction: 'none', overscrollBehavior: 'none' }}>
+        {content}
+        {!needsLandscape && <div className="absolute left-2 top-2 z-40 rounded bg-black/45 px-2 py-1 text-xs text-white/85">{status}</div>}
+      </div>
+    )
+  }
+
+  return shell(
+    mode === 'classic' ? 'Классический режим' : 'Игровой режим',
+    content,
   )
 }
 

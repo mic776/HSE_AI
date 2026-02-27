@@ -4,6 +4,7 @@ type Props = {
   mode: 'platformer' | 'shooter'
   onTrigger: (reason: 'death' | 'level_up') => void
   paused?: boolean
+  fullscreen?: boolean
 }
 
 const SRC_BY_MODE: Record<Props['mode'], string> = {
@@ -11,7 +12,7 @@ const SRC_BY_MODE: Record<Props['mode'], string> = {
   shooter: '/games/underrun_src/index.html',
 }
 
-export function GameCanvas({ mode, onTrigger, paused = false }: Props) {
+export function GameCanvas({ mode, onTrigger, paused = false, fullscreen = false }: Props) {
   const lastEmitRef = useRef(0)
   const frameRef = useRef<HTMLIFrameElement | null>(null)
   const pressedRef = useRef<Set<string>>(new Set())
@@ -189,8 +190,8 @@ export function GameCanvas({ mode, onTrigger, paused = false }: Props) {
   }
 
   return (
-    <div className="w-full overflow-hidden rounded-xl border border-emerald-950/20 bg-black/90">
-      <div className="relative aspect-[16/9] w-full">
+    <div className={fullscreen ? 'h-full w-full overflow-hidden bg-black' : 'w-full overflow-hidden rounded-xl border border-emerald-950/20 bg-black/90'}>
+      <div className={fullscreen ? 'relative h-full w-full' : 'relative aspect-[16/9] w-full'}>
         <iframe
           ref={frameRef}
           key={`${mode}:${src}`}
