@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://quiz-app.local/schemas/ai-quiz.schema.json",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["title", "questions"],
+  "properties": {
+    "title": { "type": "string", "minLength": 1 },
+    "description": { "type": "string", "minLength": 1 },
+    "questions": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/question" }
+    }
+  },
+  "$defs": {
+    "option": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "text"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "text": { "type": "string", "minLength": 1 }
+      }
+    },
+    "openAnswer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["text"],
+      "properties": {
+        "text": { "type": "string", "minLength": 1 }
+      }
+    },
+    "singleAnswer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["optionId"],
+      "properties": {
+        "optionId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "multiAnswer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["optionIds"],
+      "properties": {
+        "optionIds": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "type": "string", "minLength": 1 },
+          "uniqueItems": true
+        }
+      }
+    },
+    "questionOpen": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "prompt", "answer"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "const": "open" },
+        "prompt": { "type": "string", "minLength": 1 },
+        "answer": { "$ref": "#/$defs/openAnswer" }
+      },
+      "not": { "required": ["options"] }
+    },
+    "questionSingle": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "prompt", "options", "answer"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "const": "single" },
+        "prompt": { "type": "string", "minLength": 1 },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/option" }
+        },
+        "answer": { "$ref": "#/$defs/singleAnswer" }
+      }
+    },
+    "questionMulti": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "type", "prompt", "options", "answer"],
+      "properties": {
+        "id": { "type": "string", "minLength": 1 },
+        "type": { "const": "multi" },
+        "prompt": { "type": "string", "minLength": 1 },
+        "options": {
+          "type": "array",
+          "minItems": 2,
+          "items": { "$ref": "#/$defs/option" }
+        },
+        "answer": { "$ref": "#/$defs/multiAnswer" }
+      }
+    },
+    "question": {
+      "oneOf": [
+        { "$ref": "#/$defs/questionOpen" },
+        { "$ref": "#/$defs/questionSingle" },
+        { "$ref": "#/$defs/questionMulti" }
+      ]
+    }
+  }
+}

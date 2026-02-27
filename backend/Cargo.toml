@@ -1,0 +1,39 @@
+[package]
+name = "quiz_backend"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+axum = { version = "0.7", features = ["ws", "macros"] }
+tokio = { version = "1", features = ["full"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "2"
+anyhow = "1"
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter", "json"] }
+tower-http = { version = "0.6", features = ["cors", "trace"] }
+tower = "0.5"
+http = "1"
+axum-extra = { version = "0.9", features = ["cookie"] }
+argon2 = "0.5"
+rand = "0.8"
+uuid = { version = "1", features = ["v4", "serde"] }
+chrono = { version = "0.4", features = ["serde"] }
+validator = { version = "0.19", features = ["derive"] }
+regex = "1"
+sqlx = { version = "0.8", features = ["runtime-tokio-rustls", "mysql", "chrono", "uuid", "json", "macros", "migrate"] }
+jsonschema = "0.30"
+dashmap = "6"
+async-trait = "0.1"
+qrcode = "0.14"
+base64 = "0.22"
+futures = "0.3"
+once_cell = "1"
+reqwest = { version = "0.12", features = ["json"] }
+dotenvy = "0.15"
+
+[dev-dependencies]
+reqwest = { version = "0.12", features = ["json", "cookies"] }
+tokio-tungstenite = "0.24"
+url = "2"
