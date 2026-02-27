@@ -217,7 +217,7 @@ export function GameCanvas({ mode, onTrigger, paused = false, fullscreen = false
               {(mode === 'shooter' || mode === 'platformer') && (
                 <div
                   ref={joystickRef}
-                  className="relative h-28 w-28 rounded-full border border-white/45 bg-slate-900/45 backdrop-blur"
+                  className={`relative rounded-full border border-white/45 bg-slate-900/45 backdrop-blur ${mode === 'platformer' ? 'h-20 w-20' : 'h-28 w-28'}`}
                   onTouchStart={(e) => { e.preventDefault(); processJoystickTouch(e.touches[0]) }}
                   onTouchMove={(e) => { e.preventDefault(); processJoystickTouch(e.touches[0]) }}
                   onTouchEnd={(e) => { e.preventDefault(); updateJoystick(0, 0, false) }}
