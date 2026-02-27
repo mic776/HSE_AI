@@ -65,7 +65,7 @@ function AuthPage({ mode }: { mode: 'login' | 'register' }) {
   }
 
   return shell(
-    mode === 'login' ? 'Вход учителя' : 'Регистрация учителя',
+    mode === 'login' ? 'Вход' : 'Регистрация',
     <form className="mx-auto max-w-md space-y-3 rounded-2xl bg-white/90 p-5 shadow" onSubmit={onSubmit}>
       <input className="w-full rounded-lg border px-3 py-2" value={login} onChange={(e) => setLogin(e.target.value)} placeholder="Логин" />
       <input className="w-full rounded-lg border px-3 py-2" type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Пароль" />
@@ -77,6 +77,9 @@ function AuthPage({ mode }: { mode: 'login' | 'register' }) {
       <p className="text-sm">
         {mode === 'login' ? <Link to="/register">Нет аккаунта</Link> : <Link to="/login">Уже есть аккаунт</Link>}
       </p>
+      <Link to="/join" className="block rounded-lg bg-blue-600 px-4 py-2 text-center text-white">
+        Присоединиться к квизу
+      </Link>
     </form>,
   )
 }
@@ -126,15 +129,25 @@ function DashboardPage() {
             <div className="flex gap-2">
               <button className="rounded bg-slate-100 px-3 py-1 text-emerald-900" onClick={() => navigate(`/teacher/quizzes/${q.id}/edit`)}>Редактировать</button>
               {!q.is_published && <button className="rounded bg-emerald-900 px-3 py-1 text-white" onClick={() => api.publishQuiz(q.id).then(load)}>Публиковать</button>}
+              <button
+                className="rounded bg-red-600 px-3 py-1 text-white"
+                onClick={async () => {
+                  if (!window.confirm('Удалить викторину?')) return
+                  await api.deleteQuiz(q.id)
+                  await load()
+                }}
+              >
+                Удалить
+              </button>
               <div className="flex items-center gap-2 rounded-xl bg-slate-100 p-1.5">
                 <select
                   className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-emerald-900 outline-none focus:border-emerald-400"
                   value={modeByQuiz[q.id] ?? 'classic'}
                   onChange={(e) => setModeByQuiz((p) => ({ ...p, [q.id]: e.target.value as 'platformer' | 'shooter' | 'classic' }))}
                 >
-                  <option value="classic">Квиз</option>
-                  <option value="platformer">Платформер</option>
-                  <option value="shooter">Шутер</option>
+                  <option value="classic">Квиз (обычный)</option>
+                  <option value="platformer">Platformer (игровой режим)</option>
+                  <option value="shooter">Shooter (игровой режим)</option>
                 </select>
                 <button className="rounded-lg bg-orange-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-orange-500 active:scale-[0.98]" onClick={() => startSession(q.id)}>
                   Запустить
@@ -568,10 +581,10 @@ function NewQuizPage() {
 
 function LibraryPage() {
   const [q, setQ] = useState('')
-  const [items, setItems] = useState<Array<{ id: number; title: string; description?: string }>>([])
+  const [items, setItems] = useState<Array<{ id: number; title: string; description?: string; alreadyOwned?: boolean }>>([])
 
   async function search() {
-    const data = (await api.searchLibrary(q)) as { items: Array<{ id: number; title: string; description?: string }> }
+    const data = (await api.searchLibrary(q)) as { items: Array<{ id: number; title: string; description?: string; alreadyOwned?: boolean }> }
     setItems(data.items)
   }
 
@@ -590,7 +603,13 @@ function LibraryPage() {
         <div key={item.id} className="rounded-xl bg-white/90 p-3 shadow-sm">
           <p className="font-semibold">{item.title}</p>
           <p className="text-sm text-emerald-950/70">{item.description}</p>
-          <button className="mt-2 rounded bg-orange-600 px-3 py-1 text-white" onClick={() => api.cloneQuiz(item.id)}>Добавить в мои</button>
+          {item.alreadyOwned ? (
+            <p className="mt-2 text-sm text-emerald-900/70">Уже в ваших викторинах</p>
+          ) : (
+            <button className="mt-2 rounded bg-orange-600 px-3 py-1 text-white" onClick={async () => { await api.cloneQuiz(item.id); await search() }}>
+              Добавить в мои
+            </button>
+          )}
         </div>
       ))}
     </div>,
@@ -974,11 +993,7 @@ function StudentPlayPage() {
   const gamePaused = overlayActive || needsLandscape
   const content = (
     <div className={mode !== 'classic' && mobileView ? 'h-full w-full flex items-center justify-center' : 'space-y-3'}>
-      {mode === 'classic' ? (
-        <div className="rounded-2xl bg-white/90 p-4 shadow">
-          <p className="text-sm text-emerald-950/70">Мини-игры отключены. Следующий вопрос показывается автоматически после правильного ответа.</p>
-        </div>
-      ) : (
+      {mode !== 'classic' && (
         <div className={mobileView ? 'relative h-[80svh] w-screen max-w-screen overflow-hidden' : 'relative'}>
           <GameCanvas mode={mode} onTrigger={triggerQuestion} paused={gamePaused} fullscreen={mobileView} />
           {needsLandscape && (

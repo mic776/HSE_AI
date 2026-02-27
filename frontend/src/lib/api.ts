@@ -39,6 +39,7 @@ export const api = {
   getQuiz: (id: number) => request(`/quizzes/${id}`),
   createQuiz: (quiz: Quiz) => request('/quizzes', { method: 'POST', body: JSON.stringify(quiz) }),
   updateQuiz: (id: number, quiz: Quiz) => request(`/quizzes/${id}`, { method: 'PUT', body: JSON.stringify(quiz) }),
+  deleteQuiz: (id: number) => request(`/quizzes/${id}`, { method: 'DELETE' }),
   publishQuiz: (id: number) => request(`/quizzes/${id}/publish`, { method: 'POST' }),
   unpublishQuiz: (id: number) => request(`/quizzes/${id}/unpublish`, { method: 'POST' }),
   cloneQuiz: (id: number) => request(`/quizzes/${id}/clone`, { method: 'POST' }),

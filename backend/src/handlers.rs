@@ -546,10 +546,23 @@ pub struct SearchQuery {
 
 pub async fn library_list(
     State(state): State<AppState>,
+    jar: CookieJar,
     query: axum::extract::Query<SearchQuery>,
 ) -> Json<serde_json::Value> {
     let term = query.q.clone().unwrap_or_default().to_lowercase();
     let quizzes = state.db.quizzes.read().await;
+    let teacher_id = auth_teacher_id(&jar, &state).await;
+
+    let own_fingerprints = if let Some(tid) = teacher_id {
+        quizzes
+            .values()
+            .filter(|q| q.owner_teacher_id == tid)
+            .map(|q| quiz_fingerprint(&q.title, &q.description, &q.questions))
+            .collect::<std::collections::HashSet<_>>()
+    } else {
+        std::collections::HashSet::new()
+    };
+
     let items: Vec<_> = quizzes
         .values()
         .filter(|q| q.is_published)
@@ -563,15 +576,35 @@ pub async fn library_list(
                     .unwrap_or(false)
         })
         .map(|q| {
+            let already_owned = teacher_id
+                .map(|tid| {
+                    if q.owner_teacher_id == tid {
+                        true
+                    } else {
+                        let fp = quiz_fingerprint(&q.title, &q.description, &q.questions);
+                        own_fingerprints.contains(&fp)
+                    }
+                })
+                .unwrap_or(false);
             json!({
                 "id": q.id,
                 "title": q.title,
                 "description": q.description,
-                "ownerTeacherId": q.owner_teacher_id
+                "ownerTeacherId": q.owner_teacher_id,
+                "alreadyOwned": already_owned
             })
         })
         .collect();
     Json(json!({ "items": items, "total": items.len() }))
+}
+
+fn quiz_fingerprint(title: &str, description: &Option<String>, questions: &[crate::models::Question]) -> String {
+    let normalized = json!({
+        "title": title.trim(),
+        "description": description.as_ref().map(|v| v.trim()),
+        "questions": questions,
+    });
+    normalized.to_string()
 }
 
 #[derive(Debug, Deserialize)]

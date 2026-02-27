@@ -1,10 +1,5 @@
 {
   "teachers": {
-    "1": {
-      "id": 1,
-      "login": "teacher1",
-      "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$9B5IjpDggd3M3Ik1icldmw$pPhO+AdTZJlVzEQnFEPetXRa4Hcz8thAHulv5V601Zc"
-    },
     "3": {
       "id": 3,
       "login": "teacher2",
@@ -14,16 +9,21 @@
       "id": 2,
       "login": "ai_teacher",
       "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$PWcTcs0ha2ihWbrWHZsX6g$tm3pmQbPSpGUzAgOi9uvLqZTrsyCopD6FWLW/lY5+MY"
+    },
+    "1": {
+      "id": 1,
+      "login": "teacher1",
+      "password_hash": "$argon2id$v=19$m=19456,t=2,p=1$9B5IjpDggd3M3Ik1icldmw$pPhO+AdTZJlVzEQnFEPetXRa4Hcz8thAHulv5V601Zc"
     }
   },
   "teachers_by_login": {
-    "ai_teacher": 2,
     "teacher1": 1,
-    "teacher2": 3
+    "teacher2": 3,
+    "ai_teacher": 2
   },
   "quizzes": {
-    "2": {
-      "id": 2,
+    "5": {
+      "id": 5,
       "owner_teacher_id": 2,
       "title": "Квиз: История",
       "description": "Сгенерировано ИИ",
@@ -80,6 +80,67 @@
           ],
           "answer": {
             "optionId": "o1"
+          }
+        }
+      ],
+      "is_published": false,
+      "source_quiz_id": null
+    },
+    "1": {
+      "id": 1,
+      "owner_teacher_id": 1,
+      "title": "Математика",
+      "description": "Базовый тест",
+      "questions": [
+        {
+          "id": "q1",
+          "type": "open",
+          "prompt": "2+2",
+          "answer": {
+            "text": "4"
+          }
+        },
+        {
+          "id": "q2",
+          "type": "single",
+          "prompt": "Столица Франции",
+          "options": [
+            {
+              "id": "o1",
+              "text": "Париж"
+            },
+            {
+              "id": "o2",
+              "text": "Берлин"
+            }
+          ],
+          "answer": {
+            "optionId": "o1"
+          }
+        },
+        {
+          "id": "q3",
+          "type": "multi",
+          "prompt": "Выбери четные",
+          "options": [
+            {
+              "id": "o1",
+              "text": "2"
+            },
+            {
+              "id": "o2",
+              "text": "3"
+            },
+            {
+              "id": "o3",
+              "text": "4"
+            }
+          ],
+          "answer": {
+            "optionIds": [
+              "o1",
+              "o3"
+            ]
           }
         }
       ],
@@ -147,67 +208,6 @@
       "is_published": false,
       "source_quiz_id": 3
     },
-    "1": {
-      "id": 1,
-      "owner_teacher_id": 1,
-      "title": "Математика",
-      "description": "Базовый тест",
-      "questions": [
-        {
-          "id": "q1",
-          "type": "open",
-          "prompt": "2+2",
-          "answer": {
-            "text": "4"
-          }
-        },
-        {
-          "id": "q2",
-          "type": "single",
-          "prompt": "Столица Франции",
-          "options": [
-            {
-              "id": "o1",
-              "text": "Париж"
-            },
-            {
-              "id": "o2",
-              "text": "Берлин"
-            }
-          ],
-          "answer": {
-            "optionId": "o1"
-          }
-        },
-        {
-          "id": "q3",
-          "type": "multi",
-          "prompt": "Выбери четные",
-          "options": [
-            {
-              "id": "o1",
-              "text": "2"
-            },
-            {
-              "id": "o2",
-              "text": "3"
-            },
-            {
-              "id": "o3",
-              "text": "4"
-            }
-          ],
-          "answer": {
-            "optionIds": [
-              "o1",
-              "o3"
-            ]
-          }
-        }
-      ],
-      "is_published": false,
-      "source_quiz_id": null
-    },
     "3": {
       "id": 3,
       "owner_teacher_id": 1,
@@ -268,9 +268,73 @@
       ],
       "is_published": true,
       "source_quiz_id": null
+    },
+    "2": {
+      "id": 2,
+      "owner_teacher_id": 2,
+      "title": "Квиз: История",
+      "description": "Сгенерировано ИИ",
+      "questions": [
+        {
+          "id": "q1",
+          "type": "single",
+          "prompt": "История: вопрос 1",
+          "options": [
+            {
+              "id": "o1",
+              "text": "Верно"
+            },
+            {
+              "id": "o2",
+              "text": "Неверно"
+            }
+          ],
+          "answer": {
+            "optionId": "o1"
+          }
+        },
+        {
+          "id": "q2",
+          "type": "single",
+          "prompt": "История: вопрос 2",
+          "options": [
+            {
+              "id": "o1",
+              "text": "Верно"
+            },
+            {
+              "id": "o2",
+              "text": "Неверно"
+            }
+          ],
+          "answer": {
+            "optionId": "o1"
+          }
+        },
+        {
+          "id": "q3",
+          "type": "single",
+          "prompt": "История: вопрос 3",
+          "options": [
+            {
+              "id": "o1",
+              "text": "Верно"
+            },
+            {
+              "id": "o2",
+              "text": "Неверно"
+            }
+          ],
+          "answer": {
+            "optionId": "o1"
+          }
+        }
+      ],
+      "is_published": false,
+      "source_quiz_id": null
     }
   },
   "next_teacher_id": 4,
-  "next_quiz_id": 5,
+  "next_quiz_id": 6,
   "next_session_id": 1
 }
