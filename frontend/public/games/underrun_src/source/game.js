@@ -4,7 +4,7 @@ var udef, // global undefined
 	_document = document,
 	_temp,
 
-	keys = {37: 0, 38: 0, 39: 0, 40: 0},
+	keys = {37: 0, 38: 0, 39: 0, 40: 0, 512: 0},
 	key_up = 38, key_down = 40, key_left = 37, key_right = 39, key_shoot = 512,
 	key_convert = {65: 37, 87: 38, 68: 39, 83: 40}, // convert AWDS to left up down right
 	mouse_x = 0, mouse_y = 0,
