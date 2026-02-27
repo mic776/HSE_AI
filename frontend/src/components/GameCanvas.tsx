@@ -87,6 +87,7 @@ export function GameCanvas({ mode, onTrigger, paused = false, fullscreen = false
         emitBridgeKey('keyup', key, code || undefined)
       }
       pressedRef.current.clear()
+      setStick({ x: 0, y: 0, active: false })
     }
   }, [paused, src])
 
@@ -150,15 +151,15 @@ export function GameCanvas({ mode, onTrigger, paused = false, fullscreen = false
     emitBridgeKey('keyup', key, code)
   }
 
-  const updateShooterJoystick = (nx: number, ny: number, active: boolean) => {
-    if (mode !== 'shooter') return
+  const updateJoystick = (nx: number, ny: number, active: boolean) => {
+    if (mode !== 'shooter' && mode !== 'platformer') return
     const threshold = 0.34
     if (!active || paused) {
       release('ArrowLeft', 'ArrowLeft')
       release('ArrowRight', 'ArrowRight')
       release('ArrowUp', 'ArrowUp')
-      release('ArrowDown', 'ArrowDown')
-      emitGameMessage({ type: 'quiz_aim', nx: 0, ny: 0 })
+      if (mode === 'shooter') release('ArrowDown', 'ArrowDown')
+      if (mode === 'shooter') emitGameMessage({ type: 'quiz_aim', nx: 0, ny: 0 })
       setStick({ x: 0, y: 0, active: false })
       return
     }
@@ -169,10 +170,12 @@ export function GameCanvas({ mode, onTrigger, paused = false, fullscreen = false
     else release('ArrowRight', 'ArrowRight')
     if (ny <= -threshold) press('ArrowUp', 'ArrowUp')
     else release('ArrowUp', 'ArrowUp')
-    if (ny >= threshold) press('ArrowDown', 'ArrowDown')
-    else release('ArrowDown', 'ArrowDown')
+    if (mode === 'shooter') {
+      if (ny >= threshold) press('ArrowDown', 'ArrowDown')
+      else release('ArrowDown', 'ArrowDown')
+    }
 
-    emitGameMessage({ type: 'quiz_aim', nx, ny })
+    if (mode === 'shooter') emitGameMessage({ type: 'quiz_aim', nx, ny })
     setStick({ x: nx * 24, y: ny * 24, active: true })
   }
 
@@ -191,61 +194,34 @@ export function GameCanvas({ mode, onTrigger, paused = false, fullscreen = false
       dx *= k
       dy *= k
     }
-    updateShooterJoystick(dx / radius, dy / radius, true)
+    updateJoystick(dx / radius, dy / radius, true)
   }
 
   return (
     <div className={fullscreen ? 'h-full w-full overflow-hidden bg-black' : 'w-full overflow-hidden rounded-xl border border-emerald-950/20 bg-black/90'}>
-      <div className={fullscreen ? 'relative h-full w-full' : 'relative aspect-[16/9] w-full'}>
-        <iframe
-          ref={frameRef}
-          key={`${mode}:${src}`}
-          title={`game-${mode}`}
-          src={src}
-          tabIndex={0}
-          className="absolute inset-0 h-full w-full border-0"
-          allow="autoplay"
-          onLoad={() => frameRef.current?.contentWindow?.focus()}
-        />
-        {showTouchControls && (
-          <div className="pointer-events-none absolute inset-0 z-10 select-none" style={{ touchAction: 'none' }}>
+      <div className={fullscreen ? 'relative h-full w-full bg-black flex items-center justify-center' : 'relative aspect-[16/9] w-full'}>
+        <div className={fullscreen ? 'relative h-full w-auto max-w-full aspect-[16/9] overflow-hidden' : 'relative h-full w-full overflow-hidden'}>
+          <iframe
+            ref={frameRef}
+            key={`${mode}:${src}`}
+            title={`game-${mode}`}
+            src={src}
+            tabIndex={0}
+            className="absolute inset-0 h-full w-full border-0"
+            allow="autoplay"
+            onLoad={() => frameRef.current?.contentWindow?.focus()}
+          />
+          {showTouchControls && (
+            <div className="pointer-events-none absolute inset-0 z-10 select-none" style={{ touchAction: 'none' }}>
             <div className="absolute bottom-3 left-3 flex gap-2 pointer-events-auto">
-              {mode === 'platformer' && (
-                <>
-                  <button
-                    className="h-12 w-12 rounded-full bg-white/80 text-xl font-black text-emerald-950 shadow active:scale-95"
-                    onTouchStart={(e) => { e.preventDefault(); press('ArrowLeft', 'ArrowLeft') }}
-                    onTouchEnd={(e) => { e.preventDefault(); release('ArrowLeft', 'ArrowLeft') }}
-                    onTouchCancel={(e) => { e.preventDefault(); release('ArrowLeft', 'ArrowLeft') }}
-                  >
-                    ◀
-                  </button>
-                  <button
-                    className="h-12 w-12 rounded-full bg-emerald-200/90 text-xl font-black text-emerald-900 shadow active:scale-95"
-                    onTouchStart={(e) => { e.preventDefault(); press('ArrowUp', 'ArrowUp') }}
-                    onTouchEnd={(e) => { e.preventDefault(); release('ArrowUp', 'ArrowUp') }}
-                    onTouchCancel={(e) => { e.preventDefault(); release('ArrowUp', 'ArrowUp') }}
-                  >
-                    ▲
-                  </button>
-                  <button
-                    className="h-12 w-12 rounded-full bg-white/80 text-xl font-black text-emerald-950 shadow active:scale-95"
-                    onTouchStart={(e) => { e.preventDefault(); press('ArrowRight', 'ArrowRight') }}
-                    onTouchEnd={(e) => { e.preventDefault(); release('ArrowRight', 'ArrowRight') }}
-                    onTouchCancel={(e) => { e.preventDefault(); release('ArrowRight', 'ArrowRight') }}
-                  >
-                    ▶
-                  </button>
-                </>
-              )}
-              {mode === 'shooter' && (
+              {(mode === 'shooter' || mode === 'platformer') && (
                 <div
                   ref={joystickRef}
                   className="relative h-28 w-28 rounded-full border border-white/45 bg-slate-900/45 backdrop-blur"
                   onTouchStart={(e) => { e.preventDefault(); processJoystickTouch(e.touches[0]) }}
                   onTouchMove={(e) => { e.preventDefault(); processJoystickTouch(e.touches[0]) }}
-                  onTouchEnd={(e) => { e.preventDefault(); updateShooterJoystick(0, 0, false) }}
-                  onTouchCancel={(e) => { e.preventDefault(); updateShooterJoystick(0, 0, false) }}
+                  onTouchEnd={(e) => { e.preventDefault(); updateJoystick(0, 0, false) }}
+                  onTouchCancel={(e) => { e.preventDefault(); updateJoystick(0, 0, false) }}
                 >
                   <div className="pointer-events-none absolute inset-0 m-auto h-4 w-4 rounded-full bg-white/35" />
                   <div
@@ -275,8 +251,9 @@ export function GameCanvas({ mode, onTrigger, paused = false, fullscreen = false
                 </button>
               )}
             </div>
-          </div>
-        )}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )

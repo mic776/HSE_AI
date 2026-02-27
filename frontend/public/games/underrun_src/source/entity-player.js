@@ -2,10 +2,12 @@
 class entity_player_t extends entity_t {
 	_init() {
 		this._bob = this._last_shot = this._last_damage = this._frame = 0;
-		this.h = 2.5;
+		this._max_health = 2.5;
+		this.h = this._max_health;
 	}
 
 	_update() {
+		if (window.__QUIZ_WAITING_RESPAWN) { return; }
 		var t = this,
 			speed = 128;
 
@@ -37,6 +39,7 @@ class entity_player_t extends entity_t {
 	}
 
 	_render() {
+		if (window.__QUIZ_WAITING_RESPAWN) { return; }
 		this._frame++;
 		if (this._last_damage < 0 || this._frame % 6 < 4) {
 			super._render();
@@ -45,20 +48,24 @@ class entity_player_t extends entity_t {
 	}
 
 	_kill() {
-		super._kill();
+		if (window.__QUIZ_WAITING_RESPAWN) { return; }
 		try {
 			window.parent.postMessage({type: 'quiz_game_event', source: 'underrun', reason: 'death'}, '*');
 		} catch(e) {}
-		this.y = 10;
-		this.z += 5;
+		window.__QUIZ_WAITING_RESPAWN = true;
+		window.__QUIZ_PAUSED = true;
+		this._respawn_x = this.x;
+		this._respawn_z = this.z;
+		this.vx = this.vy = this.vz = 0;
+		this.h = 0;
 		terminal_show_notice(
 			'DEPLOYMENT FAILED\n' +
-			'RESTORING BACKUP...'
+			'ANSWER QUIZ TO RESUME...'
 		);
-		setTimeout(reload_level, 3000);
 	}
 
 	_receive_damage(from, amount) {
+		if (window.__QUIZ_WAITING_RESPAWN) { return; }
 		if (this._last_damage < 0) {
 			audio_play(audio_sfx_hurt);
 			super._receive_damage(from, amount);

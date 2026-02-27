@@ -241,12 +241,22 @@ function game_tick() {
 }
 
 window.__QUIZ_PAUSED = false;
+window.__QUIZ_WAITING_RESPAWN = false;
 window.addEventListener('message', function(ev) {
 	if (!ev || !ev.data) { return; }
 	if (ev.data.type === 'quiz_pause') {
 		var nextPaused = !!ev.data.paused;
 		if (window.__QUIZ_PAUSED && !nextPaused) {
 			keys[37] = keys[38] = keys[39] = keys[40] = keys[key_shoot] = 0;
+			if (window.__QUIZ_WAITING_RESPAWN && entity_player) {
+				entity_player.x = entity_player._respawn_x || entity_player.x;
+				entity_player.z = entity_player._respawn_z || entity_player.z;
+				entity_player.y = 0;
+				entity_player.vx = entity_player.vy = entity_player.vz = 0;
+				entity_player.h = entity_player._max_health || 2.5;
+				entity_player._last_damage = 1.2;
+				window.__QUIZ_WAITING_RESPAWN = false;
+			}
 			if (entity_player && (entity_player.y < -80 || entity_player.y > 120 || entity_player.x < -64 || entity_player.z < -64)) {
 				reload_level();
 			}
