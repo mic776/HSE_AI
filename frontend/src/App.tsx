@@ -952,13 +952,13 @@ function StudentPlayPage() {
   const needsLandscape = mode !== 'classic' && mobileView && portrait
   const gamePaused = overlayActive || needsLandscape
   const content = (
-    <div className="space-y-3">
+    <div className={mode !== 'classic' && mobileView ? 'h-full w-full' : 'space-y-3'}>
       {mode === 'classic' ? (
         <div className="rounded-2xl bg-white/90 p-4 shadow">
           <p className="text-sm text-emerald-950/70">Мини-игры отключены. Следующий вопрос показывается автоматически после правильного ответа.</p>
         </div>
       ) : (
-        <div className={mobileView ? 'relative h-full w-full' : 'relative'}>
+        <div className={mobileView ? 'relative h-full w-full overflow-hidden' : 'relative'}>
           <GameCanvas mode={mode} onTrigger={triggerQuestion} paused={gamePaused} fullscreen={mobileView} />
           {needsLandscape && (
             <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/85 p-6 text-center">
