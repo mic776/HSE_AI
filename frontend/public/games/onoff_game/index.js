@@ -253,13 +253,19 @@ class Game {
     onPress(1, this.toggle.bind(this))
     document.addEventListener('keydown', this.keydown.bind(this))
     window.addEventListener('message', ({data}) => {
-      if (!data || data.type !== 'quiz_pause') return
-      const nextPaused = !!data.paused
-      if (this.scene.externalPaused && !nextPaused) {
-        // After answering, keep player frozen briefly to avoid restart glitches.
-        this.scene.inputLockUntil = performance.now() + 1000
+      if (!data) return
+      if (data.type === 'quiz_toggle_color') {
+        this.toggle()
+        return
       }
-      this.scene.externalPaused = nextPaused
+      if (data.type === 'quiz_pause') {
+        const nextPaused = !!data.paused
+        if (this.scene.externalPaused && !nextPaused) {
+          // After answering, keep player frozen briefly to avoid restart glitches.
+          this.scene.inputLockUntil = performance.now() + 1000
+        }
+        this.scene.externalPaused = nextPaused
+      }
     })
   }
 

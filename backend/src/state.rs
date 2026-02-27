@@ -7,8 +7,10 @@ use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicI64, Ordering};
 use std::sync::Arc;
+use std::{fs, path::Path};
 use tokio::process::Command;
 use tokio::sync::{broadcast, RwLock};
+use tracing::warn;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Teacher {
@@ -68,19 +70,60 @@ pub struct InMemoryDb {
     next_session_id: AtomicI64,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize)]
+struct PersistentSnapshot {
+    teachers: HashMap<i64, Teacher>,
+    teachers_by_login: HashMap<String, i64>,
+    quizzes: HashMap<i64, QuizRecord>,
+    next_teacher_id: i64,
+    next_quiz_id: i64,
+    next_session_id: i64,
+}
+
 impl InMemoryDb {
-    pub fn new() -> Self {
+    pub fn new(snapshot_path: Option<&str>) -> Self {
+        let snapshot = snapshot_path.and_then(|path| {
+            let raw = fs::read_to_string(path).ok()?;
+            match serde_json::from_str::<PersistentSnapshot>(&raw) {
+                Ok(s) => Some(s),
+                Err(err) => {
+                    warn!("failed to read local snapshot {}: {}", path, err);
+                    None
+                }
+            }
+        });
+
+        let teachers = snapshot
+            .as_ref()
+            .map(|s| s.teachers.clone())
+            .unwrap_or_default();
+        let teachers_by_login = snapshot
+            .as_ref()
+            .map(|s| s.teachers_by_login.clone())
+            .unwrap_or_default();
+        let quizzes = snapshot
+            .as_ref()
+            .map(|s| s.quizzes.clone())
+            .unwrap_or_default();
+        let next_teacher_id = snapshot.as_ref().map(|s| s.next_teacher_id).unwrap_or(1).max(
+            teachers.keys().max().copied().unwrap_or(0) + 1,
+        );
+        let next_quiz_id = snapshot.as_ref().map(|s| s.next_quiz_id).unwrap_or(1).max(
+            quizzes.keys().max().copied().unwrap_or(0) + 1,
+        );
+        let next_session_id = snapshot.as_ref().map(|s| s.next_session_id).unwrap_or(1).max(1);
+
         Self {
-            teachers: RwLock::new(HashMap::new()),
-            teachers_by_login: RwLock::new(HashMap::new()),
+            teachers: RwLock::new(teachers),
+            teachers_by_login: RwLock::new(teachers_by_login),
             sessions: RwLock::new(HashMap::new()),
-            quizzes: RwLock::new(HashMap::new()),
+            quizzes: RwLock::new(quizzes),
             game_sessions: RwLock::new(HashMap::new()),
             rooms: RwLock::new(HashMap::new()),
             broadcasters: DashMap::new(),
-            next_teacher_id: AtomicI64::new(1),
-            next_quiz_id: AtomicI64::new(1),
-            next_session_id: AtomicI64::new(1),
+            next_teacher_id: AtomicI64::new(next_teacher_id),
+            next_quiz_id: AtomicI64::new(next_quiz_id),
+            next_session_id: AtomicI64::new(next_session_id),
         }
     }
 
@@ -94,6 +137,17 @@ impl InMemoryDb {
 
     pub fn next_game_session_id(&self) -> i64 {
         self.next_session_id.fetch_add(1, Ordering::SeqCst)
+    }
+
+    async fn snapshot(&self) -> PersistentSnapshot {
+        PersistentSnapshot {
+            teachers: self.teachers.read().await.clone(),
+            teachers_by_login: self.teachers_by_login.read().await.clone(),
+            quizzes: self.quizzes.read().await.clone(),
+            next_teacher_id: self.next_teacher_id.load(Ordering::SeqCst),
+            next_quiz_id: self.next_quiz_id.load(Ordering::SeqCst),
+            next_session_id: self.next_session_id.load(Ordering::SeqCst),
+        }
     }
 }
 
@@ -291,14 +345,20 @@ pub struct AppState {
     pub db: Arc<InMemoryDb>,
     pub ai_client: Arc<dyn AiQuizClient>,
     pub quiz_schema: Arc<serde_json::Value>,
+    pub local_state_path: Option<String>,
 }
 
 impl AppState {
     pub fn new(ai_client: Arc<dyn AiQuizClient>, quiz_schema: serde_json::Value) -> Self {
+        let local_state_path = std::env::var("LOCAL_STATE_PATH")
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .or_else(|| Some(format!("{}/local_state.json", env!("CARGO_MANIFEST_DIR"))));
         Self {
-            db: Arc::new(InMemoryDb::new()),
+            db: Arc::new(InMemoryDb::new(local_state_path.as_deref())),
             ai_client,
             quiz_schema: Arc::new(quiz_schema),
+            local_state_path,
         }
     }
 
@@ -314,6 +374,22 @@ impl AppState {
             source_quiz_id,
         };
         self.db.quizzes.write().await.insert(id, record);
+        if let Err(err) = self.persist_core_data().await {
+            warn!("failed to persist local state after create_quiz: {}", err);
+        }
         id
+    }
+
+    pub async fn persist_core_data(&self) -> anyhow::Result<()> {
+        let Some(path) = self.local_state_path.as_ref() else {
+            return Ok(());
+        };
+        let snapshot = self.db.snapshot().await;
+        let serialized = serde_json::to_vec_pretty(&snapshot)?;
+        if let Some(parent) = Path::new(path).parent() {
+            tokio::fs::create_dir_all(parent).await?;
+        }
+        tokio::fs::write(path, serialized).await?;
+        Ok(())
     }
 }

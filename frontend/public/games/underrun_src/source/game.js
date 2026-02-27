@@ -256,6 +256,16 @@ window.addEventListener('message', function(ev) {
 		return;
 	}
 
+	if (ev.data.type === 'quiz_aim') {
+		var nx = Number(ev.data.nx || 0);
+		var ny = Number(ev.data.ny || 0);
+		var centerX = c.width * 0.5;
+		var centerY = c.height * 0.8 - 34;
+		mouse_x = centerX + nx * 120;
+		mouse_y = centerY + ny * 120;
+		return;
+	}
+
 	if (ev.data.type === 'quiz_key') {
 		var keyName = ev.data.key;
 		var keyCodeByLayout =

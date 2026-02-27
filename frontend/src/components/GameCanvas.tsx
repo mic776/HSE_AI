@@ -15,7 +15,9 @@ export function GameCanvas({ mode, onTrigger, paused = false }: Props) {
   const lastEmitRef = useRef(0)
   const frameRef = useRef<HTMLIFrameElement | null>(null)
   const pressedRef = useRef<Set<string>>(new Set())
+  const joystickRef = useRef<HTMLDivElement | null>(null)
   const [showTouchControls, setShowTouchControls] = useState(false)
+  const [stick, setStick] = useState({ x: 0, y: 0, active: false })
   const src = useMemo(() => SRC_BY_MODE[mode], [mode])
 
   const emitBridgeKey = (kind: 'keydown' | 'keyup', key: string, code?: string) => {
@@ -33,6 +35,10 @@ export function GameCanvas({ mode, onTrigger, paused = false }: Props) {
         preventDefault: () => {},
       } as any)
     }
+  }
+
+  const emitGameMessage = (payload: Record<string, unknown>) => {
+    frameRef.current?.contentWindow?.postMessage(payload, '*')
   }
 
   useEffect(() => {
@@ -138,10 +144,48 @@ export function GameCanvas({ mode, onTrigger, paused = false }: Props) {
     emitBridgeKey('keyup', key, code)
   }
 
-  const tap = (key: string, code: string) => {
-    if (paused) return
-    emitBridgeKey('keydown', key, code)
-    window.setTimeout(() => emitBridgeKey('keyup', key, code), 35)
+  const updateShooterJoystick = (nx: number, ny: number, active: boolean) => {
+    if (mode !== 'shooter') return
+    const threshold = 0.34
+    if (!active || paused) {
+      release('ArrowLeft', 'ArrowLeft')
+      release('ArrowRight', 'ArrowRight')
+      release('ArrowUp', 'ArrowUp')
+      release('ArrowDown', 'ArrowDown')
+      emitGameMessage({ type: 'quiz_aim', nx: 0, ny: 0 })
+      setStick({ x: 0, y: 0, active: false })
+      return
+    }
+
+    if (nx <= -threshold) press('ArrowLeft', 'ArrowLeft')
+    else release('ArrowLeft', 'ArrowLeft')
+    if (nx >= threshold) press('ArrowRight', 'ArrowRight')
+    else release('ArrowRight', 'ArrowRight')
+    if (ny <= -threshold) press('ArrowUp', 'ArrowUp')
+    else release('ArrowUp', 'ArrowUp')
+    if (ny >= threshold) press('ArrowDown', 'ArrowDown')
+    else release('ArrowDown', 'ArrowDown')
+
+    emitGameMessage({ type: 'quiz_aim', nx, ny })
+    setStick({ x: nx * 24, y: ny * 24, active: true })
+  }
+
+  const processJoystickTouch = (touch: { clientX: number; clientY: number }) => {
+    const base = joystickRef.current
+    if (!base) return
+    const rect = base.getBoundingClientRect()
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+    let dx = touch.clientX - cx
+    let dy = touch.clientY - cy
+    const radius = Math.min(rect.width, rect.height) / 2 - 8
+    const distance = Math.hypot(dx, dy)
+    if (distance > radius) {
+      const k = radius / distance
+      dx *= k
+      dy *= k
+    }
+    updateShooterJoystick(dx / radius, dy / radius, true)
   }
 
   return (
@@ -160,64 +204,63 @@ export function GameCanvas({ mode, onTrigger, paused = false }: Props) {
         {showTouchControls && (
           <div className="pointer-events-none absolute inset-0 z-10 select-none" style={{ touchAction: 'none' }}>
             <div className="absolute bottom-3 left-3 flex gap-2 pointer-events-auto">
-              <button
-                className="h-12 w-12 rounded-full bg-white/80 text-xl font-black text-emerald-950 shadow active:scale-95"
-                onTouchStart={(e) => { e.preventDefault(); press('ArrowLeft', 'ArrowLeft') }}
-                onTouchEnd={(e) => { e.preventDefault(); release('ArrowLeft', 'ArrowLeft') }}
-                onTouchCancel={(e) => { e.preventDefault(); release('ArrowLeft', 'ArrowLeft') }}
-              >
-                ◀
-              </button>
-              {mode === 'shooter' && (
-                <button
-                  className="h-12 w-12 rounded-full bg-white/80 text-xl font-black text-emerald-950 shadow active:scale-95"
-                  onTouchStart={(e) => { e.preventDefault(); press('ArrowUp', 'ArrowUp') }}
-                  onTouchEnd={(e) => { e.preventDefault(); release('ArrowUp', 'ArrowUp') }}
-                  onTouchCancel={(e) => { e.preventDefault(); release('ArrowUp', 'ArrowUp') }}
-                >
-                  ▲
-                </button>
-              )}
-              <button
-                className="h-12 w-12 rounded-full bg-white/80 text-xl font-black text-emerald-950 shadow active:scale-95"
-                onTouchStart={(e) => { e.preventDefault(); press('ArrowRight', 'ArrowRight') }}
-                onTouchEnd={(e) => { e.preventDefault(); release('ArrowRight', 'ArrowRight') }}
-                onTouchCancel={(e) => { e.preventDefault(); release('ArrowRight', 'ArrowRight') }}
-              >
-                ▶
-              </button>
-              {mode === 'shooter' && (
-                <button
-                  className="h-12 w-12 rounded-full bg-white/80 text-xl font-black text-emerald-950 shadow active:scale-95"
-                  onTouchStart={(e) => { e.preventDefault(); press('ArrowDown', 'ArrowDown') }}
-                  onTouchEnd={(e) => { e.preventDefault(); release('ArrowDown', 'ArrowDown') }}
-                  onTouchCancel={(e) => { e.preventDefault(); release('ArrowDown', 'ArrowDown') }}
-                >
-                  ▼
-                </button>
-              )}
-            </div>
-            <div className="absolute bottom-3 right-3 flex gap-2 pointer-events-auto">
-              {mode === 'platformer' ? (
+              {mode === 'platformer' && (
                 <>
                   <button
-                    className="h-12 rounded-full bg-amber-200/90 px-4 text-sm font-bold text-amber-900 shadow active:scale-95"
-                    onTouchStart={(e) => { e.preventDefault(); tap(' ', 'Space') }}
+                    className="h-12 w-12 rounded-full bg-white/80 text-xl font-black text-emerald-950 shadow active:scale-95"
+                    onTouchStart={(e) => { e.preventDefault(); press('ArrowLeft', 'ArrowLeft') }}
+                    onTouchEnd={(e) => { e.preventDefault(); release('ArrowLeft', 'ArrowLeft') }}
+                    onTouchCancel={(e) => { e.preventDefault(); release('ArrowLeft', 'ArrowLeft') }}
                   >
-                    Цвет
+                    ◀
                   </button>
                   <button
-                    className="h-12 rounded-full bg-emerald-200/90 px-4 text-sm font-bold text-emerald-900 shadow active:scale-95"
+                    className="h-12 w-12 rounded-full bg-emerald-200/90 text-xl font-black text-emerald-900 shadow active:scale-95"
                     onTouchStart={(e) => { e.preventDefault(); press('ArrowUp', 'ArrowUp') }}
                     onTouchEnd={(e) => { e.preventDefault(); release('ArrowUp', 'ArrowUp') }}
                     onTouchCancel={(e) => { e.preventDefault(); release('ArrowUp', 'ArrowUp') }}
                   >
-                    Прыжок
+                    ▲
+                  </button>
+                  <button
+                    className="h-12 w-12 rounded-full bg-white/80 text-xl font-black text-emerald-950 shadow active:scale-95"
+                    onTouchStart={(e) => { e.preventDefault(); press('ArrowRight', 'ArrowRight') }}
+                    onTouchEnd={(e) => { e.preventDefault(); release('ArrowRight', 'ArrowRight') }}
+                    onTouchCancel={(e) => { e.preventDefault(); release('ArrowRight', 'ArrowRight') }}
+                  >
+                    ▶
                   </button>
                 </>
+              )}
+              {mode === 'shooter' && (
+                <div
+                  ref={joystickRef}
+                  className="relative h-28 w-28 rounded-full border border-white/45 bg-slate-900/45 backdrop-blur"
+                  onTouchStart={(e) => { e.preventDefault(); processJoystickTouch(e.touches[0]) }}
+                  onTouchMove={(e) => { e.preventDefault(); processJoystickTouch(e.touches[0]) }}
+                  onTouchEnd={(e) => { e.preventDefault(); updateShooterJoystick(0, 0, false) }}
+                  onTouchCancel={(e) => { e.preventDefault(); updateShooterJoystick(0, 0, false) }}
+                >
+                  <div className="pointer-events-none absolute inset-0 m-auto h-4 w-4 rounded-full bg-white/35" />
+                  <div
+                    className="pointer-events-none absolute left-1/2 top-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/85 shadow-md"
+                    style={{ transform: `translate(calc(-50% + ${stick.x}px), calc(-50% + ${stick.y}px))` }}
+                  />
+                </div>
+              )}
+            </div>
+            <div className="absolute bottom-3 right-3 flex gap-2 pointer-events-auto">
+              {mode === 'platformer' ? (
+                <button
+                  className="relative h-14 w-14 rounded-full ring-2 ring-white/75 shadow-lg active:scale-95"
+                  style={{ background: 'conic-gradient(#f8fafc 0deg 180deg, #0f172a 180deg 360deg)' }}
+                  onTouchStart={(e) => { e.preventDefault(); emitGameMessage({ type: 'quiz_toggle_color' }) }}
+                >
+                  <span className="absolute inset-0 flex items-center justify-center text-lg font-black text-sky-700">↔</span>
+                </button>
               ) : (
                 <button
-                  className="h-12 rounded-full bg-rose-200/90 px-5 text-sm font-bold text-rose-900 shadow active:scale-95"
+                  className="relative h-14 w-14 rounded-full border-2 border-rose-100/90 bg-rose-500/90 text-xs font-black uppercase tracking-wide text-white shadow-xl active:scale-95"
                   onTouchStart={(e) => { e.preventDefault(); press(' ', 'Space') }}
                   onTouchEnd={(e) => { e.preventDefault(); release(' ', 'Space') }}
                   onTouchCancel={(e) => { e.preventDefault(); release(' ', 'Space') }}

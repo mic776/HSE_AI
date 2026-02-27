@@ -17,7 +17,7 @@ use serde_json::json;
 use std::collections::HashMap;
 use std::time::{Duration, Instant};
 use tokio::sync::broadcast;
-use tracing::info;
+use tracing::{info, warn};
 use once_cell::sync::Lazy;
 use dashmap::DashMap;
 
@@ -135,6 +135,9 @@ pub async fn register(
     let teacher = Teacher { id, login: login.clone(), password_hash: hash };
     state.db.teachers.write().await.insert(id, teacher);
     state.db.teachers_by_login.write().await.insert(login.clone(), id);
+    if let Err(err) = state.persist_core_data().await {
+        warn!("failed to persist local state after register: {}", err);
+    }
 
     Ok((StatusCode::CREATED, Json(TeacherOut { id, login })))
 }
@@ -398,6 +401,10 @@ pub async fn update_quiz(
     item.title = quiz.title;
     item.description = quiz.description;
     item.questions = quiz.questions;
+    drop(quizzes);
+    if let Err(err) = state.persist_core_data().await {
+        warn!("failed to persist local state after update_quiz: {}", err);
+    }
     Ok(Json(QuizIdResponse { quiz_id: id }))
 }
 
@@ -422,6 +429,10 @@ pub async fn delete_quiz(
         return Err(AppError::new(StatusCode::FORBIDDEN, "FORBIDDEN", "access denied", request_id_from_headers(&headers)));
     }
     quizzes.remove(&id);
+    drop(quizzes);
+    if let Err(err) = state.persist_core_data().await {
+        warn!("failed to persist local state after delete_quiz: {}", err);
+    }
     Ok(StatusCode::NO_CONTENT)
 }
 
@@ -445,6 +456,10 @@ pub async fn publish_quiz(
         return Err(AppError::new(StatusCode::FORBIDDEN, "FORBIDDEN", "access denied", request_id_from_headers(&headers)));
     }
     q.is_published = true;
+    drop(quizzes);
+    if let Err(err) = state.persist_core_data().await {
+        warn!("failed to persist local state after publish_quiz: {}", err);
+    }
     Ok(Json(json!({ "published": true })))
 }
 
@@ -468,6 +483,10 @@ pub async fn unpublish_quiz(
         return Err(AppError::new(StatusCode::FORBIDDEN, "FORBIDDEN", "access denied", request_id_from_headers(&headers)));
     }
     q.is_published = false;
+    drop(quizzes);
+    if let Err(err) = state.persist_core_data().await {
+        warn!("failed to persist local state after unpublish_quiz: {}", err);
+    }
     Ok(Json(json!({ "published": false })))
 }
 

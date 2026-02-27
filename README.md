@@ -1,4 +1,4 @@
-# Quiz Arena RU (local network ready)
+# HoroQuiz (local network ready)
 
 Production-grade минимально-рабочая версия платформы квизов:
 - учитель: регистрация/логин, CRUD квизов, публикация, библиотека, clone, запуск live-сессии
@@ -24,6 +24,7 @@ SESSION_SECRET=change_me_to_long_random_secret
 RUST_LOG=info
 CORS_ORIGIN=http://localhost:5173
 COOKIE_SECURE=false
+LOCAL_STATE_PATH=backend/local_state.json
 
 GIGACHAT_BASE_URL=https://gigachat.devices.sberbank.ru
 GIGACHAT_AUTH_URL=https://ngw.devices.sberbank.ru:9443/api/v2/oauth
@@ -112,7 +113,8 @@ cargo test
 
 ## GigaChat integration
 
-- Реализация storage для runtime сделана in-memory (быстрый локальный контур), миграции MySQL и sqlx-инициализация присутствуют.
+- Основные данные (`аккаунты/квизы/публикации`) сохраняются в локальный snapshot-файл `LOCAL_STATE_PATH` и переживают перезапуск backend.
+- Миграции MySQL и sqlx-инициализация также присутствуют.
 - Backend вызывает официальный Python SDK `gigachat` (скрипт `backend/scripts/gigachat_generate.py`) и использует `Chat` + `messages` + `stream=false`.
 - В `main` загружается `.env` через `dotenvy`.
 - Авторизация в SDK:
