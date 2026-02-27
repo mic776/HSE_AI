@@ -2,6 +2,7 @@
 class entity_player_t extends entity_t {
 	_init() {
 		this._bob = this._last_shot = this._last_damage = this._frame = 0;
+		this.h = 2.5;
 	}
 
 	_update() {

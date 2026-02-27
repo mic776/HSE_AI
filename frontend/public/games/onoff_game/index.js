@@ -32,6 +32,7 @@ class Scene extends Body {
     this.goal = new Goal
     this.append(this.goal)
     this.index = 0
+    this.inputLockUntil = 0
   }
 
   get fromURL () {
@@ -82,6 +83,7 @@ class Scene extends Body {
     this._index = Math.min(this.levels.length, Math.max(value || 0))
 
     this.on = true
+    this.startOn = this.on
     this.stars.value = this.index
     while (this.bars.length) this.bars.pop().remove()
     while (this.spikes.length) this.spikes.pop().remove()
@@ -159,6 +161,7 @@ class Scene extends Body {
   }
 
   reset () {
+    this.on = this.startOn
     this.guy.load(...this.level[0])
   }
 
@@ -203,8 +206,14 @@ class Scene extends Body {
 
   tick (scale) {
     if (this.paused || this.externalPaused || this.hidden) return
+    const controlsLocked = performance.now() < this.inputLockUntil
 
-    this.guy.tick(scale)
+    if (!controlsLocked) {
+      this.guy.tick(scale)
+    } else {
+      this.guy.vx = 0
+      this.guy.walking = false
+    }
 
     const {left, right} = this.setBounds(this.guy)
     this.guy.x += Math.min(right, Math.max(left, this.guy.vx))
@@ -213,8 +222,12 @@ class Scene extends Body {
     this.guy.y += Math.min(bottom, Math.max(top, this.guy.vy))
 
     if (bottom === 0) {
-      this.guy.vy = upKey() ? -scale(1656) : 0
-      if (upKey()) JUMP_FX.play()
+      if (controlsLocked) {
+        this.guy.vy = 0
+      } else {
+        this.guy.vy = upKey() ? -scale(1904) : 0
+        if (upKey()) JUMP_FX.play()
+      }
     } else {
       this.guy.vy = Math.min(scale(600), this.guy.vy + scale(120))
     }
@@ -241,7 +254,12 @@ class Game {
     document.addEventListener('keydown', this.keydown.bind(this))
     window.addEventListener('message', ({data}) => {
       if (!data || data.type !== 'quiz_pause') return
-      this.scene.externalPaused = !!data.paused
+      const nextPaused = !!data.paused
+      if (this.scene.externalPaused && !nextPaused) {
+        // After answering, keep player frozen briefly to avoid restart glitches.
+        this.scene.inputLockUntil = performance.now() + 1000
+      }
+      this.scene.externalPaused = nextPaused
     })
   }
 
@@ -288,6 +306,9 @@ if (level) {
     game.scene.index = 0
     game.state = 'play'
   } catch (error) {}
+} else {
+  game.scene.index = 0
+  game.state = 'play'
 }
 
 let previous = 0

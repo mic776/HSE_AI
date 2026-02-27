@@ -224,7 +224,7 @@ function game_tick() {
 	camera_z += camera_shake * (_math.random()-0.5);
 
 	// health bar, render with plasma sprite
-	for (var i = 0; i < entity_player.h; i++) {
+	for (var i = 0; i < _math.floor(entity_player.h); i++) {
 		push_sprite(-camera_x - 50 + i * 4, 29-camera_y, -camera_z-30, 26);
 	}
 
@@ -267,10 +267,10 @@ window.addEventListener('message', function(ev) {
 			ev.data.code === 'ArrowDown' ? 40 :
 			ev.data.code === 'ArrowLeft' ? 37 :
 			ev.data.code === 'ArrowRight' ? 39 :
-			ev.data.code === 'Space' ? 32 : 0;
+			ev.data.code === 'Space' ? key_shoot : 0;
 		var kind = ev.data.kind;
 		var keyCode =
-			keyName === ' ' ? 32 :
+			keyName === ' ' ? key_shoot :
 			keyName === 'w' ? 87 :
 			keyName === 'a' ? 65 :
 			keyName === 's' ? 83 :

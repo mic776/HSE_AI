@@ -838,6 +838,8 @@ function StudentPlayPage() {
     initialMode,
   )
   const [question, setQuestion] = useState<Question | null>(null)
+  const [awaitingNextQuestion, setAwaitingNextQuestion] = useState(false)
+  const [mustGetCorrect, setMustGetCorrect] = useState(false)
   const [status, setStatus] = useState(mode === 'classic' ? 'Классический режим запущен' : 'Игра запущена')
   const navigate = useNavigate()
 
@@ -845,11 +847,22 @@ function StudentPlayPage() {
     if (!roomCode || !nickname) return
     const ws = connectRoom(roomCode, (msg) => {
       if (msg.event === 'question_push') {
+        setAwaitingNextQuestion(false)
         setQuestion((msg.payload as { question: Question }).question)
       }
       if (msg.event === 'answer_result') {
         const payload = msg.payload as { correct: boolean; nextAction: string }
-        setStatus(payload.correct ? 'Верно, идём дальше' : 'Неверно, идём к следующему вопросу')
+        if (mode === 'classic') {
+          setStatus(payload.correct ? 'Верно, идём дальше' : 'Неверно, идём к следующему вопросу')
+        } else if (payload.correct) {
+          setStatus('Верно, продолжаем игру')
+          setMustGetCorrect(false)
+          setAwaitingNextQuestion(false)
+        } else {
+          setStatus('Неверно, следующий вопрос')
+          setAwaitingNextQuestion(true)
+          setTimeout(() => sendWs(ws, 'request_question', { reason: 'level_up' }), 180)
+        }
         if (mode === 'classic' && payload.nextAction === 'continue') {
           setTimeout(() => sendWs(ws, 'request_question', { reason: 'level_up' }), 200)
         }
@@ -867,7 +880,10 @@ function StudentPlayPage() {
   }, [roomCode, nickname, navigate, mode])
 
   const triggerQuestion = (reason: 'death' | 'level_up') => {
-    if (!socket || question) return
+    if (!socket || question || awaitingNextQuestion || mustGetCorrect) return
+    setMustGetCorrect(true)
+    setAwaitingNextQuestion(true)
+    setStatus('Ответьте правильно, чтобы продолжить')
     sendWs(socket, 'request_question', { reason })
   }
 
@@ -875,7 +891,12 @@ function StudentPlayPage() {
     if (!socket || !question) return
     sendWs(socket, 'answer_submit', { questionId: question.id, answer })
     setQuestion(null)
+    if (mode !== 'classic') {
+      setAwaitingNextQuestion(true)
+    }
   }
+
+  const overlayActive = mode !== 'classic' && (Boolean(question) || awaitingNextQuestion || mustGetCorrect)
 
   return shell(
     mode === 'classic' ? 'Классический режим' : 'Игровой режим',
@@ -885,10 +906,26 @@ function StudentPlayPage() {
           <p className="text-sm text-emerald-950/70">Мини-игры отключены. Следующий вопрос показывается автоматически после правильного ответа.</p>
         </div>
       ) : (
-        <GameCanvas mode={mode} onTrigger={triggerQuestion} paused={Boolean(question)} />
+        <div className="relative">
+          <GameCanvas mode={mode} onTrigger={triggerQuestion} paused={overlayActive} />
+          {overlayActive && (
+            <div className="absolute inset-0 z-20 flex items-center justify-center bg-black/70 p-4 backdrop-blur-[2px]">
+              {question ? (
+                <div className="w-full max-w-2xl">
+                  <QuestionCard question={question} onSubmit={submitAnswer} />
+                </div>
+              ) : (
+                <div className="rounded-2xl bg-white/95 px-6 py-4 text-center shadow-lg">
+                  <p className="text-sm uppercase tracking-wide text-emerald-900/70">Вопрос</p>
+                  <p className="mt-2 text-lg font-semibold text-emerald-950">Загружаем следующий вопрос...</p>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
       <div className="rounded-xl bg-white/90 p-3 shadow text-sm">{status}</div>
-      {question && <QuestionCard question={question} onSubmit={submitAnswer} />}
+      {mode === 'classic' && question && <QuestionCard question={question} onSubmit={submitAnswer} />}
     </div>,
   )
 }
