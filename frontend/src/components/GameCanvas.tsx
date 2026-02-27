@@ -249,8 +249,8 @@ export function GameCanvas({ mode, onTrigger, paused = false, fullscreen = false
                 >
                   <div className="pointer-events-none absolute inset-0 m-auto h-4 w-4 rounded-full bg-white/35" />
                   <div
-                    className="pointer-events-none absolute left-1/2 top-1/2 h-9 w-9 -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/85 shadow-md"
-                    style={{ transform: `translate(calc(-50% + ${stick.x}px), calc(-50% + ${stick.y}px))` }}
+                    className="pointer-events-none absolute h-9 w-9 rounded-full bg-white/85 shadow-md"
+                    style={{ left: `calc(50% + ${stick.x}px - 18px)`, top: `calc(50% + ${stick.y}px - 18px)` }}
                   />
                 </div>
               )}

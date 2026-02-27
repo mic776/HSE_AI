@@ -9,6 +9,16 @@ import type { Question, Quiz, WsEnvelope } from './types'
 import { GameCanvas } from './components/GameCanvas'
 import { QuestionCard } from './components/QuestionCard'
 
+function extractApiMessage(err: unknown): string {
+  const raw = String(err ?? '').trim()
+  const candidate = raw.startsWith('Error:') ? raw.slice(6).trim() : raw
+  try {
+    const parsed = JSON.parse(candidate) as { error?: { message?: string } }
+    if (parsed?.error?.message) return parsed.error.message
+  } catch {}
+  return raw || 'Произошла ошибка'
+}
+
 function shell(title: string, body: ReactNode) {
   return (
     <div className="mx-auto min-h-screen w-full max-w-5xl px-4 py-6 md:px-8">
@@ -50,7 +60,7 @@ function AuthPage({ mode }: { mode: 'login' | 'register' }) {
       await api.login(trimmedLogin, password)
       navigate('/teacher/dashboard')
     } catch (err) {
-      setError(String(err))
+      setError(extractApiMessage(err))
     }
   }
 
@@ -778,6 +788,7 @@ function TeacherResultsPage() {
 function JoinPage() {
   const [room, setRoom] = useState('')
   const [nickname, setNickname] = useState('')
+  const [error, setError] = useState('')
   const navigate = useNavigate()
   const [sp] = useSearchParams()
 
@@ -787,7 +798,15 @@ function JoinPage() {
   }, [sp])
 
   function join() {
-    if (room.trim().length < 3 || nickname.trim().length < 2) return
+    if (room.trim().length < 3) {
+      setError('Код комнаты должен быть не короче 3 символов')
+      return
+    }
+    if (nickname.trim().length < 2) {
+      setError('Ник должен содержать минимум 2 символа')
+      return
+    }
+    setError('')
     localStorage.setItem('student_nickname', nickname.trim())
     navigate(`/wait/${room.trim().toUpperCase()}`)
   }
@@ -797,6 +816,8 @@ function JoinPage() {
     <div className="mx-auto max-w-md space-y-3 rounded-2xl bg-white/90 p-4 shadow">
       <input className="w-full rounded border px-3 py-2" value={room} onChange={(e) => setRoom(e.target.value)} placeholder="Код комнаты" />
       <input className="w-full rounded border px-3 py-2" value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Ник" />
+      <p className="text-xs text-emerald-950/70">Минимум 2 символа в нике.</p>
+      {error && <p className="text-sm text-red-600">{error}</p>}
       <button className="rounded bg-emerald-900 px-4 py-2 text-white" onClick={join}>Войти</button>
     </div>,
   )
@@ -952,13 +973,13 @@ function StudentPlayPage() {
   const needsLandscape = mode !== 'classic' && mobileView && portrait
   const gamePaused = overlayActive || needsLandscape
   const content = (
-    <div className={mode !== 'classic' && mobileView ? 'h-full w-full' : 'space-y-3'}>
+    <div className={mode !== 'classic' && mobileView ? 'h-full w-full flex items-center justify-center' : 'space-y-3'}>
       {mode === 'classic' ? (
         <div className="rounded-2xl bg-white/90 p-4 shadow">
           <p className="text-sm text-emerald-950/70">Мини-игры отключены. Следующий вопрос показывается автоматически после правильного ответа.</p>
         </div>
       ) : (
-        <div className={mobileView ? 'relative h-full w-full overflow-hidden' : 'relative'}>
+        <div className={mobileView ? 'relative h-[80svh] w-screen max-w-screen overflow-hidden' : 'relative'}>
           <GameCanvas mode={mode} onTrigger={triggerQuestion} paused={gamePaused} fullscreen={mobileView} />
           {needsLandscape && (
             <div className="absolute inset-0 z-30 flex items-center justify-center bg-black/85 p-6 text-center">
@@ -994,7 +1015,6 @@ function StudentPlayPage() {
     return (
       <div className="fixed inset-0 z-40 h-screen w-screen overflow-hidden bg-black" style={{ touchAction: 'none', overscrollBehavior: 'none' }}>
         {content}
-        {!needsLandscape && <div className="absolute left-2 top-2 z-40 rounded bg-black/45 px-2 py-1 text-xs text-white/85">{status}</div>}
       </div>
     )
   }
