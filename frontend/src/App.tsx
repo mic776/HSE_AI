@@ -28,7 +28,7 @@ function shell(title: string, body: ReactNode) {
           <Link to="/teacher/dashboard" className="rounded-md bg-white px-2 py-1">Панель</Link>
           <Link to="/teacher/quizzes/new" className="rounded-md bg-white px-2 py-1">Новый квиз</Link>
           <Link to="/teacher/library" className="rounded-md bg-white px-2 py-1">Библиотека</Link>
-          <Link to="/join" className="rounded-md bg-white px-2 py-1">Вход ученика</Link>
+          <Link to="/join" className="hidden rounded-md bg-white px-2 py-1 md:inline-block">Вход ученика</Link>
         </nav>
       </motion.header>
       <h2 className="mb-3 text-xl font-bold">{title}</h2>
