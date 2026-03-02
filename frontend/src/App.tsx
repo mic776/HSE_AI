@@ -82,7 +82,7 @@ function AuthPage({ mode }: { mode: 'login' | 'register' }) {
 
 function DashboardPage() {
   const [quizzes, setQuizzes] = useState<Array<{ id: number; title: string; is_published: boolean }>>([])
-  const [modeByQuiz, setModeByQuiz] = useState<Record<number, 'platformer' | 'shooter' | 'classic'>>({})
+  const [pendingStart, setPendingStart] = useState<null | { id: number; title: string }>(null)
   const navigate = useNavigate()
 
   async function load() {
@@ -98,8 +98,7 @@ function DashboardPage() {
     load()
   }, [])
 
-  async function startSession(quizId: number) {
-    const mode = modeByQuiz[quizId] ?? 'classic'
+  async function startSession(quizId: number, mode: 'platformer' | 'shooter' | 'classic') {
     const response = (await api.createSession(quizId, mode)) as { sessionId: number; roomCode: string }
     navigate(`/teacher/sessions/${response.sessionId}/waiting?room=${response.roomCode}`)
   }
@@ -135,24 +134,37 @@ function DashboardPage() {
               >
                 Удалить
               </button>
-              <div className="flex items-center gap-2 rounded-xl bg-slate-100 p-1.5">
-                <select
-                  className="rounded-lg border border-slate-200 bg-white px-2 py-1 text-sm text-emerald-900 outline-none focus:border-emerald-400"
-                  value={modeByQuiz[q.id] ?? 'classic'}
-                  onChange={(e) => setModeByQuiz((p) => ({ ...p, [q.id]: e.target.value as 'platformer' | 'shooter' | 'classic' }))}
-                >
-                  <option value="classic">Квиз (обычный)</option>
-                  <option value="platformer">Platformer (игровой режим)</option>
-                  <option value="shooter">Shooter (игровой режим)</option>
-                </select>
-                <button className="rounded-lg bg-orange-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-orange-500 active:scale-[0.98]" onClick={() => startSession(q.id)}>
-                  Запустить
-                </button>
-              </div>
+              <button className="rounded-lg bg-orange-600 px-3 py-1 text-sm font-semibold text-white transition hover:bg-orange-500 active:scale-[0.98]" onClick={() => setPendingStart({ id: q.id, title: q.title })}>
+                Запустить
+              </button>
             </div>
           </div>
         </motion.div>
       ))}
+      {pendingStart && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+          <div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl">
+            <p className="text-sm uppercase tracking-[0.2em] text-emerald-950/60">Выбор режима</p>
+            <p className="mt-2 text-lg font-semibold">{pendingStart.title}</p>
+            <div className="mt-4 grid gap-2">
+              <button className="rounded-xl bg-emerald-900 px-4 py-2 text-white" onClick={() => startSession(pendingStart.id, 'classic')}>
+                Квиз (обычный)
+              </button>
+              <button className="rounded-xl bg-slate-100 px-4 py-2" onClick={() => startSession(pendingStart.id, 'platformer')}>
+                Platformer (игровой режим)
+              </button>
+              <button className="rounded-xl bg-slate-100 px-4 py-2" onClick={() => startSession(pendingStart.id, 'shooter')}>
+                Shooter (игровой режим)
+              </button>
+            </div>
+            <div className="mt-4 flex justify-end">
+              <button className="rounded-lg px-3 py-1 text-sm text-emerald-900" onClick={() => setPendingStart(null)}>
+                Отмена
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>,
   )
 }
